@@ -1,0 +1,35 @@
+services:
+  mautrix-chatgpt:
+    container_name: mautrix-chatgpt
+    image: mautrix-chatgpt:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+    environment:
+      - UID=1000
+      - GID=1000
+    # Minimal resource requirements (no heavy Agent SDK)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+# Optional postgres database
+#  postgres:
+#    container_name: mautrix-chatgpt-postgres
+#    image: postgres:16-alpine
+#    restart: unless-stopped
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+#    environment:
+#      POSTGRES_USER: mautrix
+#      POSTGRES_PASSWORD: changeme
+#      POSTGRES_DB: mautrix_chatgpt
+
+#volumes:
+#  postgres_data:

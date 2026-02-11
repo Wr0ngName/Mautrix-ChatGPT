@@ -1,0 +1,104 @@
+# mautrix-chatgpt configuration
+
+# Homeserver details
+homeserver:
+    address: https://matrix.example.com
+    domain: example.com
+    software: standard
+    status_endpoint: null
+    message_send_checkpoint_endpoint: null
+    async_media: false
+
+# Application service
+appservice:
+    address: http://localhost:29350
+    hostname: 0.0.0.0
+    port: 29350
+    max_body_size: 1
+    database: sqlite:mautrix-chatgpt.db
+    database_opts:
+        min_size: 1
+        max_size: 10
+    id: chatgpt
+    bot_username: chatgptbot
+    bot_displayname: ChatGPT bridge bot
+    bot_avatar: mxc://maunium.net/openai
+    ephemeral_events: true
+    async_transactions: false
+    as_token: "This value is generated when generating the registration"
+    hs_token: "This value is generated when generating the registration"
+
+# Bridge config
+bridge:
+    username_template: chatgpt_{{.}}
+    displayname_template: "{{.ProfileName}} (ChatGPT)"
+    private_chat_portal_meta: true
+    delivery_receipts: false
+    federate_rooms: true
+    backfill:
+        enabled: false
+        max_initial_messages: 0
+    command_prefix: "!chatgpt"
+    management_room_text:
+        welcome: "Hello, I'm a ChatGPT bridge bot."
+        welcome_connected: "Use `help` for help."
+        welcome_unconnected: "Use `help` for help or `login` to log in."
+        additional_help: "Login with your OpenAI API key from platform.openai.com"
+    encryption:
+        allow: false
+        default: false
+        appservice: false
+        require: false
+        allow_key_sharing: false
+        delete_keys:
+            delete_outbound_on_ack: false
+            dont_store_outbound: false
+            ratchet_on_decrypt: false
+            delete_fully_used_on_decrypt: false
+            delete_prev_on_new_session: false
+            delete_on_device_delete: false
+            periodically_delete_expired: false
+            delete_outdated_inbound: false
+        verification_levels:
+            receive: cross-signed-tofu
+            send: cross-signed-tofu
+            share: cross-signed-tofu
+        rotation:
+            enable_custom: false
+            milliseconds: 604800000
+            messages: 100
+            disable_device_change_key_rotation: false
+    permissions:
+        "*": relay
+        "example.com": user
+        "@admin:example.com": admin
+
+# ChatGPT network options
+network:
+    # Default model: gpt-4o, gpt-4-turbo, gpt-3.5-turbo, o1, o1-mini
+    default_model: gpt-4o
+
+    # Maximum tokens for responses
+    max_tokens: 4096
+
+    # Temperature (0.0-2.0 for OpenAI, default 1.0)
+    temperature: 1.0
+
+    # Default system prompt
+    system_prompt: "You are a helpful AI assistant."
+
+    # Conversation max age in hours (0 = unlimited)
+    conversation_max_age_hours: 24
+
+    # Rate limit (requests per minute)
+    rate_limit_per_minute: 60
+
+# Logging
+logging:
+    directory: ./logs
+    file_name_format: "{{.Date}}-{{.Name}}.log"
+    file_mode: 0600
+    timestamp_format: "Jan _2, 2006 15:04:05"
+    print_level: debug
+    print_json: false
+    file_level: debug
