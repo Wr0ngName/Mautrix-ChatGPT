@@ -11,9 +11,10 @@
 config.yaml
 registration.yaml
 
-# IDE
+# IDE / tools
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 
