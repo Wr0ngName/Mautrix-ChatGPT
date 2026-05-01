@@ -19,14 +19,28 @@ docker:
       TOML
     - docker buildx rm multiarch 2>/dev/null || true
     - docker buildx create --use --name multiarch --config /tmp/buildkitd.toml
-    - docker buildx build
-        --platform linux/amd64,linux/arm64
-        --build-arg COMMIT_HASH=${CI_COMMIT_SHA}
-        --build-arg BUILD_TIME=$(date -Iseconds)
-        --build-arg VERSION=${CI_COMMIT_TAG:-0.1.0}
-        -t ${REGISTRY}/${IMAGE_NAME}:latest
-        -t ${REGISTRY}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}
-        --push
+    - |
+      TAGS="-t ${REGISTRY}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}"
+      if echo "${CI_COMMIT_TAG}" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+        SEMVER="${CI_COMMIT_TAG#v}"
+        MAJOR=$(echo "$SEMVER" | cut -d. -f1)
+        MINOR=$(echo "$SEMVER" | cut -d. -f1-2)
+        TAGS="$TAGS -t ${REGISTRY}/${IMAGE_NAME}:${SEMVER}"
+        TAGS="$TAGS -t ${REGISTRY}/${IMAGE_NAME}:${MINOR}"
+        TAGS="$TAGS -t ${REGISTRY}/${IMAGE_NAME}:${MAJOR}"
+        TAGS="$TAGS -t ${REGISTRY}/${IMAGE_NAME}:latest"
+        VERSION="$SEMVER"
+      else
+        TAGS="$TAGS -t ${REGISTRY}/${IMAGE_NAME}:latest"
+        VERSION="0.1.0-dev.${CI_COMMIT_SHORT_SHA}"
+      fi
+      docker buildx build \
+        --platform linux/amd64,linux/arm64 \
+        --build-arg COMMIT_HASH=${CI_COMMIT_SHA} \
+        --build-arg BUILD_TIME=$(date -Iseconds) \
+        --build-arg VERSION=${VERSION} \
+        ${TAGS} \
+        --push \
         .
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -51,11 +65,16 @@ dockerhub:
     - docker buildx rm multiarch 2>/dev/null || true
     - docker buildx create --use --name multiarch --config /tmp/buildkitd.toml
     - echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
-    - VERSION="${CI_COMMIT_TAG#v}"
-    - DOCKERHUB_IMAGE="${DOCKERHUB_USERNAME}/${IMAGE_NAME}"
-    - docker buildx imagetools create
-        -t ${DOCKERHUB_IMAGE}:${VERSION}
-        -t ${DOCKERHUB_IMAGE}:latest
+    - |
+      SEMVER="${CI_COMMIT_TAG#v}"
+      MAJOR=$(echo "$SEMVER" | cut -d. -f1)
+      MINOR=$(echo "$SEMVER" | cut -d. -f1-2)
+      DOCKERHUB_IMAGE="${DOCKERHUB_USERNAME}/${IMAGE_NAME}"
+      docker buildx imagetools create \
+        -t ${DOCKERHUB_IMAGE}:${SEMVER} \
+        -t ${DOCKERHUB_IMAGE}:${MINOR} \
+        -t ${DOCKERHUB_IMAGE}:${MAJOR} \
+        -t ${DOCKERHUB_IMAGE}:latest \
         ${REGISTRY}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}
     - docker logout
   rules:
