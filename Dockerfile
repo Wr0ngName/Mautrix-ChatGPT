@@ -3,10 +3,14 @@
 # Simple API mode only (no sidecar needed for OpenAI)
 
 # ============== Stage 1: Build Go binary ==============
-FROM golang:1.25-bookworm AS builder
+# Cross-compile on the build platform to avoid slow QEMU emulation for Go
+FROM --platform=$BUILDPLATFORM golang:1.25-bookworm AS builder
+
+ARG TARGETARCH
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git ca-certificates build-essential libsqlite3-dev \
+    gcc-aarch64-linux-gnu libc6-dev-arm64-cross \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
@@ -19,7 +23,10 @@ ARG COMMIT_HASH
 ARG BUILD_TIME
 ARG VERSION=0.1.0
 
-RUN CGO_ENABLED=1 go build -tags "goolm" -o /usr/bin/mautrix-chatgpt \
+RUN case "$TARGETARCH" in \
+      arm64) export CC=aarch64-linux-gnu-gcc ;; \
+    esac && \
+    CGO_ENABLED=1 GOARCH=$TARGETARCH go build -tags "goolm" -o /usr/bin/mautrix-chatgpt \
     -ldflags "-s -w \
         -X main.Tag=${VERSION} \
         -X main.Commit=${COMMIT_HASH:-$(git rev-parse HEAD 2>/dev/null || echo unknown)} \
